@@ -1,6 +1,7 @@
 # CCM Cloud-Agnostic Testing Framework
 
 A comprehensive, cloud-agnostic testing framework for Kubernetes Cloud Controller Manager (CCM) functionality across different cloud providers.
+It uses - https://github.com/miyadav/cloud-provider-testing-interface/ as interface to create tests
 
 ## 🚀 Quick Start
 
