@@ -13,8 +13,7 @@
 # limitations under the License.
 
 # Build configuration
-BINARY_NAME=test-runner
-E2E_BINARY_NAME=e2e-test-runner
+BINARY_NAME=e2e-test-runner
 BUILD_DIR=bin
 VERSION?=$(shell git describe --tags --always --dirty)
 GOOS?=$(shell go env GOOS)
@@ -42,29 +41,30 @@ help: ## Show this help message
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 .PHONY: build
-build: ## Build the test runner binary
+build: ## Build the e2e test runner binary
 	@echo "Building $(BINARY_NAME)..."
 	@mkdir -p $(BUILD_DIR)
-	$(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) cmd/test-runner/main.go
+	$(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) cmd/e2e-test-runner/main.go
 	@echo "Binary built: $(BUILD_DIR)/$(BINARY_NAME)"
 
-.PHONY: build-e2e
-build-e2e: ## Build the e2e test runner binary
-	@echo "Building $(E2E_BINARY_NAME)..."
-	@mkdir -p $(BUILD_DIR)
-	$(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(E2E_BINARY_NAME) cmd/e2e-test-runner/main.go
-	@echo "Binary built: $(BUILD_DIR)/$(E2E_BINARY_NAME)"
-
 .PHONY: build-all
-build-all: ## Build binaries for all supported platforms
+build-all: ## Build all binaries (e2e test runner and existing CCM test)
+	@echo "Building all binaries..."
+	@mkdir -p $(BUILD_DIR)
+	$(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) cmd/e2e-test-runner/main.go
+	$(GO) build $(LDFLAGS) -o $(BUILD_DIR)/existing-ccm-test cmd/existing-ccm-test/main.go
+	@echo "All binaries built in $(BUILD_DIR)/"
+
+.PHONY: build-cross-platform
+build-cross-platform: ## Build binaries for all supported platforms
 	@echo "Building for all platforms..."
 	@mkdir -p $(BUILD_DIR)
-	GOOS=linux GOARCH=amd64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 cmd/test-runner/main.go
-	GOOS=linux GOARCH=arm64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 cmd/test-runner/main.go
-	GOOS=darwin GOARCH=amd64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64 cmd/test-runner/main.go
-	GOOS=darwin GOARCH=arm64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 cmd/test-runner/main.go
-	GOOS=windows GOARCH=amd64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe cmd/test-runner/main.go
-	@echo "Binaries built in $(BUILD_DIR)/"
+	GOOS=linux GOARCH=amd64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 cmd/e2e-test-runner/main.go
+	GOOS=linux GOARCH=arm64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-linux-arm64 cmd/e2e-test-runner/main.go
+	GOOS=darwin GOARCH=amd64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64 cmd/e2e-test-runner/main.go
+	GOOS=darwin GOARCH=arm64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-arm64 cmd/e2e-test-runner/main.go
+	GOOS=windows GOARCH=amd64 $(GO) build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe cmd/e2e-test-runner/main.go
+	@echo "Cross-platform binaries built in $(BUILD_DIR)/"
 
 .PHONY: clean
 clean: ## Clean build artifacts
@@ -80,19 +80,14 @@ test: ## Run all tests
 	$(GO) test $(TEST_VERBOSE) -timeout $(TEST_TIMEOUT) ./pkg/testing/...
 
 .PHONY: test-e2e
-test-e2e: build-e2e ## Run e2e tests with mock provider
+test-e2e: build ## Run e2e tests with mock provider
 	@echo "Running e2e tests with mock provider..."
-	./$(BUILD_DIR)/$(E2E_BINARY_NAME) --provider mock --suite all --verbose
+	./$(BUILD_DIR)/$(BINARY_NAME) --provider mock --suite all --verbose
 
 .PHONY: test-unit
 test-unit: ## Run unit tests only
 	@echo "Running unit tests..."
 	$(GO) test $(TEST_VERBOSE) -timeout $(TEST_TIMEOUT) ./pkg/testing/... -run "^Test.*Unit"
-
-.PHONY: test-integration
-test-integration: ## Run integration tests only
-	@echo "Running integration tests..."
-	$(GO) test $(TEST_VERBOSE) -timeout $(TEST_TIMEOUT) ./pkg/testing/integration_test.go
 
 .PHONY: test-coverage
 test-coverage: ## Run tests with coverage
@@ -107,29 +102,29 @@ test-benchmark: ## Run benchmark tests
 	$(GO) test -bench=. -benchmem ./pkg/testing/...
 
 .PHONY: test-runner
-test-runner: build ## Run the test runner with default settings
-	@echo "Running test runner..."
+test-runner: build ## Run the e2e test runner with default settings
+	@echo "Running e2e test runner..."
 	./$(BUILD_DIR)/$(BINARY_NAME)
 
 .PHONY: test-runner-loadbalancer
 test-runner-loadbalancer: build ## Run load balancer test suite
 	@echo "Running load balancer test suite..."
-	./$(BUILD_DIR)/$(BINARY_NAME) -suite=loadbalancer -verbose
+	./$(BUILD_DIR)/$(BINARY_NAME) --suite=loadbalancer --verbose
 
 .PHONY: test-runner-nodes
 test-runner-nodes: build ## Run node management test suite
 	@echo "Running node management test suite..."
-	./$(BUILD_DIR)/$(BINARY_NAME) -suite=nodes -verbose
+	./$(BUILD_DIR)/$(BINARY_NAME) --suite=nodes --verbose
 
 .PHONY: test-runner-routes
 test-runner-routes: build ## Run route management test suite
 	@echo "Running route management test suite..."
-	./$(BUILD_DIR)/$(BINARY_NAME) -suite=routes -verbose
+	./$(BUILD_DIR)/$(BINARY_NAME) --suite=routes --verbose
 
 .PHONY: test-runner-all
 test-runner-all: build ## Run all test suites
 	@echo "Running all test suites..."
-	./$(BUILD_DIR)/$(BINARY_NAME) -suite=all -verbose
+	./$(BUILD_DIR)/$(BINARY_NAME) --suite=all --verbose
 
 .PHONY: lint
 lint: ## Run linter
@@ -178,7 +173,7 @@ vendor: ## Vendor dependencies
 .PHONY: install
 install: build ## Install the binary to GOPATH
 	@echo "Installing binary..."
-	$(GO) install $(LDFLAGS) ./cmd/test-runner
+	$(GO) install $(LDFLAGS) ./cmd/e2e-test-runner
 
 .PHONY: uninstall
 uninstall: ## Remove the binary from GOPATH
@@ -202,7 +197,7 @@ docker-clean: ## Clean Docker images
 	docker rmi ccm-cloudagnostic-tests:$(VERSION) ccm-cloudagnostic-tests:latest 2>/dev/null || true
 
 .PHONY: release
-release: clean build-all ## Create release artifacts
+release: clean build-cross-platform ## Create release artifacts
 	@echo "Creating release artifacts..."
 	@mkdir -p release
 	@cd $(BUILD_DIR) && tar -czf ../release/$(BINARY_NAME)-$(VERSION)-linux-amd64.tar.gz $(BINARY_NAME)-linux-amd64
@@ -233,9 +228,9 @@ dev-setup: ## Setup development environment
 .PHONY: examples
 examples: build ## Run example tests
 	@echo "Running example tests..."
-	./$(BUILD_DIR)/$(BINARY_NAME) -suite=loadbalancer -verbose
-	./$(BUILD_DIR)/$(BINARY_NAME) -suite=nodes -verbose
-	./$(BUILD_DIR)/$(BINARY_NAME) -suite=routes -verbose
+	./$(BUILD_DIR)/$(BINARY_NAME) --provider mock --suite=loadbalancer --verbose
+	./$(BUILD_DIR)/$(BINARY_NAME) --provider mock --suite=nodes --verbose
+	./$(BUILD_DIR)/$(BINARY_NAME) --provider mock --suite=routes --verbose
 
 .PHONY: docs
 docs: ## Generate documentation

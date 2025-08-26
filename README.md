@@ -1,474 +1,256 @@
-# Cloud-Agnostic CCM Testing Framework
+# CCM Cloud-Agnostic Testing Framework
 
-A comprehensive, cloud-agnostic testing framework for Kubernetes Cloud Controller Manager (CCM) implementations. This framework provides a standardized way to test cloud provider functionality across different cloud platforms while maintaining independence from specific cloud provider implementations.
+A comprehensive, cloud-agnostic testing framework for Kubernetes Cloud Controller Manager (CCM) functionality across different cloud providers.
 
-## Overview
+## 🚀 Quick Start
 
-The Cloud-Agnostic CCM Testing Framework is built on top of the [cloud-provider-testing-interface](https://github.com/miyadav/cloud-provider-testing-interface) and provides:
-
-- **Cloud-Agnostic Testing**: Test cloud provider functionality without being tied to specific cloud implementations
-- **Comprehensive Test Suites**: Pre-built test suites for all major CCM functionality
-- **Mock Cloud Provider**: A complete mock implementation for testing and development
-- **Flexible Configuration**: Configurable test environments and parameters
-- **Extensible Architecture**: Easy to extend with custom test cases and cloud providers
-
-## Features
-
-### Test Suites
-
-The framework includes comprehensive test suites for all major CCM functionality:
-
-- **Load Balancer Tests**: Create, update, delete, and manage load balancers
-- **Node Management Tests**: Node initialization, addressing, provider IDs, and zone management
-- **Route Management Tests**: Route creation, deletion, and listing
-- **Instances Tests**: Instance existence, shutdown detection, and metadata
-- **Zones Tests**: Zone information retrieval and management
-- **Clusters Tests**: Cluster listing and master node detection
-
-### Cloud Provider Independence
-
-The framework is designed to work with any cloud provider that implements the standard Kubernetes cloud provider interface:
-
-```go
-type Interface interface {
-    Initialize(clientBuilder ControllerClientBuilder, stop <-chan struct{})
-    LoadBalancer() (LoadBalancer, bool)
-    Instances() (Instances, bool)
-    InstancesV2() (InstancesV2, bool)
-    Zones() (Zones, bool)
-    Clusters() (Clusters, bool)
-    Routes() (Routes, bool)
-    ProviderName() string
-    HasClusterID() bool
-}
-```
-
-### Mock Cloud Provider
-
-A complete mock cloud provider implementation is included for:
-
-- Development and testing without real cloud resources
-- CI/CD pipeline testing
-- Learning and understanding cloud provider interfaces
-- Validating test framework functionality
-
-## Installation
-
-### Prerequisites
-
-- Go 1.24 or later
-- Kubernetes client-go libraries
-- Access to a Kubernetes cluster (optional, for integration testing)
-
-### Building
-
+### 1. Build the Framework
 ```bash
-# Clone the repository
-git clone https://github.com/kubernetes/ccm-cloudagnostic-tests.git
-cd ccm-cloudagnostic-tests
+# Build the main e2e test runner
+make build
 
-# Build the test runner
-go build -o bin/test-runner cmd/test-runner/main.go
-
-# Run tests
-go test ./pkg/testing/...
+# Build all binaries (e2e test runner + existing CCM test)
+make build-all
 ```
 
-## Usage
-
-### Command Line Test Runner
-
-The framework includes a command-line test runner with extensive configuration options:
-
+### 2. Test with Mock Provider (Local Testing)
 ```bash
-# Run all test suites
-./bin/test-runner
-
-# Run specific test suite
-./bin/test-runner -suite=loadbalancer
-
-# Run with verbose output
-./bin/test-runner -suite=all -verbose
-
-# Run with custom configuration
-./bin/test-runner \
-  -suite=loadbalancer \
-  -provider=mock \
-  -cluster=my-cluster \
-  -region=us-west-1 \
-  -zone=us-west-1a \
-  -timeout=5m \
-  -verbose
-
-# Run specific tests
-./bin/test-runner -tests=CreateLoadBalancer,UpdateLoadBalancer
-
-# Skip specific tests
-./bin/test-runner -skip=LoadBalancerHealthCheck
-
-# Output in JSON format
-./bin/test-runner -output=json
+# Test with mock provider (no cluster needed)
+./bin/e2e-test-runner --provider mock --suite all --verbose
 ```
 
-### Available Flags
+### 3. Test with Real Cluster (No Cloud Credentials Needed!)
+```bash
+# Test existing CCM in your cluster (recommended)
+./bin/existing-ccm-test --kubeconfig ~/.kube/config --verbose
 
-| Flag | Description | Default |
-|------|-------------|---------|
-| `-suite` | Test suite to run (all, loadbalancer, nodes, routes, instances, zones, clusters) | `all` |
-| `-verbose` | Enable verbose output | `false` |
-| `-timeout` | Test timeout | `10m` |
-| `-provider` | Cloud provider name | `mock` |
-| `-cluster` | Cluster name | `test-cluster` |
-| `-region` | Region | `test-region` |
-| `-zone` | Zone | `test-zone` |
-| `-cleanup` | Clean up resources after tests | `true` |
-| `-mock-external` | Use mock external services | `true` |
-| `-output` | Output format (text, json) | `text` |
-| `-tests` | Comma-separated list of specific tests to run | `` |
-| `-skip` | Comma-separated list of tests to skip | `` |
-| `-log-level` | Log level (debug, info, warn, error) | `info` |
-
-### Programmatic Usage
-
-You can also use the framework programmatically in your own tests:
-
-```go
-package main
-
-import (
-    "context"
-    "time"
-    
-    "github.com/kubernetes/ccm-cloudagnostic-tests/pkg/testing"
-    testing "github.com/miyadav/cloud-provider-testing-interface"
-)
-
-func main() {
-    // Create your cloud provider instance
-    cloudProvider := &YourCloudProvider{}
-    
-    // Create test interface
-    testImpl := testing.NewCCMTestInterface(cloudProvider)
-    
-    // Create test configuration
-    config := &testing.TestConfig{
-        ProviderName:         "your-cloud-provider",
-        ClusterName:          "test-cluster",
-        Region:               "us-west-1",
-        Zone:                 "us-west-1a",
-        TestTimeout:          5 * time.Minute,
-        CleanupResources:     true,
-        MockExternalServices: false,
-    }
-    
-    // Setup test environment
-    err := testImpl.SetupTestEnvironment(config)
-    if err != nil {
-        log.Fatalf("Failed to setup test environment: %v", err)
-    }
-    defer testImpl.TeardownTestEnvironment()
-    
-    // Create test runner
-    runner := testing.NewTestRunner(testImpl)
-    
-    // Add test suites
-    runner.AddTestSuite(testing.CreateLoadBalancerTestSuite())
-    runner.AddTestSuite(testing.CreateNodeTestSuite())
-    
-    // Run tests
-    ctx := context.Background()
-    err = runner.RunTests(ctx)
-    if err != nil {
-        log.Fatalf("Test execution failed: %v", err)
-    }
-    
-    // Get results
-    summary := runner.GetSummary()
-    fmt.Printf("Tests completed: %d passed, %d failed\n", 
-        summary.PassedTests, summary.FailedTests)
-}
+# Or use the full e2e test runner
+./bin/e2e-test-runner --provider existing --kubeconfig ~/.kube/config --suite loadbalancer --verbose
 ```
 
-## Test Suites
-
-### Load Balancer Test Suite
-
-Tests load balancer functionality including creation, updates, deletion, and status management.
-
-**Tests included:**
-- `CreateLoadBalancer`: Test creating a new load balancer
-- `UpdateLoadBalancer`: Test updating an existing load balancer
-- `DeleteLoadBalancer`: Test deleting a load balancer
-- `LoadBalancerStatus`: Test load balancer status updates
-- `LoadBalancerHealthCheck`: Test health check functionality
-
-### Node Management Test Suite
-
-Tests node management functionality including initialization, addressing, and metadata.
-
-**Tests included:**
-- `NodeInitialization`: Test node initialization and registration
-- `NodeAddresses`: Test node address management
-- `NodeProviderID`: Test provider ID management
-- `NodeInstanceType`: Test instance type detection
-- `NodeZones`: Test zone management
-
-### Route Management Test Suite
-
-Tests route management functionality including creation, deletion, and listing.
-
-**Tests included:**
-- `CreateRoute`: Test creating a new route
-- `DeleteRoute`: Test deleting a route
-- `ListRoutes`: Test listing existing routes
-
-### Instances Test Suite
-
-Tests instance-related functionality including existence checks and metadata.
-
-**Tests included:**
-- `InstanceExists`: Test instance existence check
-- `InstanceShutdown`: Test instance shutdown detection
-- `InstanceMetadata`: Test instance metadata retrieval
-
-### Zones Test Suite
-
-Tests zone-related functionality including zone information retrieval.
-
-**Tests included:**
-- `GetZone`: Test zone information retrieval
-- `GetZoneByProviderID`: Test zone retrieval by provider ID
-
-### Clusters Test Suite
-
-Tests cluster-related functionality including cluster listing and master node detection.
-
-**Tests included:**
-- `ListClusters`: Test listing clusters
-- `Master`: Test master node detection
-
-## Extending the Framework
-
-### Adding Custom Test Suites
-
-You can create custom test suites for your specific needs:
-
-```go
-func CreateCustomTestSuite() testing.TestSuite {
-    return testing.TestSuite{
-        Name:        "CustomTests",
-        Description: "Custom test suite for specific functionality",
-        Setup:       setupCustomTestSuite,
-        Teardown:    teardownCustomTestSuite,
-        Tests: []testing.Test{
-            {
-                Name:        "CustomTest1",
-                Description: "Custom test 1",
-                Run:         testCustomFunctionality1,
-                Timeout:     2 * time.Minute,
-            },
-            {
-                Name:        "CustomTest2",
-                Description: "Custom test 2",
-                Run:         testCustomFunctionality2,
-                Timeout:     1 * time.Minute,
-            },
-        },
-    }
-}
-
-func setupCustomTestSuite(ti testing.TestInterface) error {
-    // Setup code for custom test suite
-    return nil
-}
-
-func teardownCustomTestSuite(ti testing.TestInterface) error {
-    // Cleanup code for custom test suite
-    return nil
-}
-
-func testCustomFunctionality1(ti testing.TestInterface) error {
-    // Test implementation
-    return nil
-}
-
-func testCustomFunctionality2(ti testing.TestInterface) error {
-    // Test implementation
-    return nil
-}
+### 4. Test with Real Cloud Provider (Requires Credentials)
+```bash
+# AWS EKS Example
+./bin/e2e-test-runner \
+  --provider aws \
+  --kubeconfig ~/.kube/config \
+  --region us-west-2 \
+  --zone us-west-2a \
+  --cluster my-eks-cluster \
+  --suite loadbalancer \
+  --verbose
 ```
 
-### Adding Custom Cloud Providers
+## 🎯 Key Features
 
-To add support for a new cloud provider:
+### ✅ **Cloud-Agnostic Testing**
+- Same test interface across all cloud providers
+- Consistent test expectations and validation
+- Easy to add new cloud providers
 
-1. Implement the `cloudprovider.Interface`
-2. Add the provider to the `createCloudProvider` function in `cmd/test-runner/main.go`
-3. Create provider-specific configuration if needed
+### ✅ **Multiple Testing Modes**
+- **Mock Provider**: Local testing without cluster (fast, free)
+- **Existing CCM**: Test your running CCM (no credentials needed)
+- **Real Providers**: Full e2e testing with cloud credentials
 
-```go
-func createCloudProvider(providerName string) (cloudprovider.Interface, error) {
-    switch strings.ToLower(providerName) {
-    case "mock":
-        return testing.NewMockCloudProvider(), nil
-    case "your-provider":
-        return &YourCloudProvider{}, nil
-    default:
-        return nil, fmt.Errorf("unsupported cloud provider: %s", providerName)
-    }
-}
+### ✅ **Comprehensive Test Suites**
+- **LoadBalancer**: Creation, updates, deletion, status
+- **Node Management**: Initialization, addresses, provider IDs
+- **Route Management**: Creation, deletion, listing
+- **Instances**: Existence, shutdown detection, metadata
+- **Zones**: Information retrieval
+- **Clusters**: Listing and master node detection
+
+### ✅ **Production Ready**
+- Resource cleanup and management
+- Error handling and reporting
+- CI/CD integration examples
+- Comprehensive documentation
+
+## 🏗️ Architecture
+
+### **Components**
+1. **E2E Test Runner** (`cmd/e2e-test-runner/`): Main testing tool supporting all providers
+2. **Existing CCM Test** (`cmd/existing-ccm-test/`): Simple tool for testing running CCM
+3. **Test Interface** (`pkg/testing/`): Cloud-agnostic testing interface
+4. **Cloud Provider Adapters** (`pkg/testing/`): Provider-specific implementations
+5. **Mock Provider**: Simulated cloud provider for local testing
+
+### **Supported Cloud Providers**
+- **Mock**: Simulated provider for local testing
+- **Existing**: Test your running CCM (no credentials needed)
+- **AWS**: Amazon EKS support
+- **GCP**: Google GKE support
+- **Azure**: Azure AKS support
+- **IBM Cloud**: IBM IKS support (structure ready)
+
+## 📋 Prerequisites
+
+### **For Local Testing (Mock Provider)**
+- Go 1.24+
+- No external dependencies
+
+### **For Real Cluster Testing (Existing CCM)**
+- Running Kubernetes cluster with CCM enabled
+- Valid kubeconfig file
+- No cloud credentials needed!
+
+### **For Real Cloud Provider Testing**
+- Running Kubernetes cluster with CCM enabled
+- Valid kubeconfig file
+- Cloud provider credentials with appropriate permissions
+
+## 🔧 Usage Examples
+
+### **Mock Provider Testing**
+```bash
+# Test all suites
+./bin/e2e-test-runner --provider mock --suite all --verbose
+
+# Test specific suite
+./bin/e2e-test-runner --provider mock --suite loadbalancer --verbose
 ```
 
-## Configuration
+### **Existing CCM Testing (Recommended)**
+```bash
+# Simple test of your running CCM
+./bin/existing-ccm-test --kubeconfig ~/.kube/config --verbose
 
-### Environment Variables
+# Full e2e test runner with existing CCM
+./bin/e2e-test-runner --provider existing --kubeconfig ~/.kube/config --suite all --verbose
+```
 
-The framework supports configuration through environment variables:
+### **Real Cloud Provider Testing**
+```bash
+# AWS EKS
+./bin/e2e-test-runner \
+  --provider aws \
+  --kubeconfig ~/.kube/config \
+  --region us-west-2 \
+  --zone us-west-2a \
+  --cluster my-eks-cluster \
+  --suite loadbalancer \
+  --verbose
 
-- `CLOUD_PROVIDER_CONFIG`: Path to cloud provider configuration file
-- `TEST_TIMEOUT`: Default test timeout
-- `CLEANUP_RESOURCES`: Whether to clean up resources after tests
-- `MOCK_EXTERNAL_SERVICES`: Whether to use mock external services
+# GCP GKE
+./bin/e2e-test-runner \
+  --provider gcp \
+  --kubeconfig ~/.kube/config \
+  --region us-central1 \
+  --zone us-central1-a \
+  --cluster my-gke-cluster \
+  --suite loadbalancer \
+  --verbose
 
-### Configuration Files
+# Azure AKS
+./bin/e2e-test-runner \
+  --provider azure \
+  --kubeconfig ~/.kube/config \
+  --region eastus \
+  --zone eastus-1 \
+  --cluster my-aks-cluster \
+  --suite loadbalancer \
+  --verbose
+```
 
-You can provide cloud provider-specific configuration through configuration files:
+## ⚙️ Configuration Options
 
+### **Required Flags**
+- `--provider`: Cloud provider (`mock`, `existing`, `aws`, `gcp`, `azure`, `ibmcloud`)
+- `--kubeconfig`: Path to kubeconfig (not required for mock)
+
+### **Cloud Provider Configuration**
+- `--region`: Cloud provider region
+- `--zone`: Cloud provider zone/availability zone
+- `--cluster`: Cluster name
+- `--prefix`: Resource prefix for test resources (default: `e2e-test`)
+
+### **Test Execution**
+- `--suite`: Test suite to run (`all`, `loadbalancer`, `nodes`, `routes`, `instances`, `zones`, `clusters`)
+- `--timeout`: Test timeout (default: 30m)
+- `--verbose`: Enable verbose output
+- `--cleanup`: Clean up resources after tests (default: true)
+
+## 🔄 CI/CD Integration
+
+### **GitHub Actions Example**
 ```yaml
-# config/test-config.yaml
-test:
-  provider:
-    name: "your-cloud-provider"
-    region: "us-west-1"
-    zone: "us-west-1a"
-  
-  cluster:
-    name: "test-cluster"
-    version: "1.24.0"
-  
-  resources:
-    cleanup: true
-    timeout: "5m"
-  
-  external_services:
-    mock: false  # Use real cloud services for integration tests
-```
-
-## Integration with CI/CD
-
-### GitHub Actions
-
-Example GitHub Actions workflow for running tests:
-
-```yaml
-name: CCM Tests
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+name: CCM E2E Tests
+on: [push, pull_request]
 
 jobs:
-  test:
+  e2e-tests:
     runs-on: ubuntu-latest
-    
     steps:
     - uses: actions/checkout@v3
     
     - name: Set up Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v3
       with:
         go-version: '1.24'
     
-    - name: Install dependencies
-      run: go mod download
+    - name: Build e2e test runner
+      run: make build
     
-    - name: Run unit tests
-      run: go test -v ./pkg/testing/...
+    - name: Test with mock provider
+      run: ./bin/e2e-test-runner --provider mock --suite all --verbose
     
-    - name: Run integration tests
-      run: go test -v ./pkg/testing/integration_test.go
-      env:
-        CLOUD_PROVIDER_CONFIG: ${{ secrets.CLOUD_PROVIDER_CONFIG }}
-    
-    - name: Run test runner
-      run: go run cmd/test-runner/main.go -suite=all -verbose
-      env:
-        CLOUD_PROVIDER_CONFIG: ${{ secrets.CLOUD_PROVIDER_CONFIG }}
+    - name: Test existing CCM (if cluster available)
+      run: |
+        if [ -n "$KUBECONFIG" ]; then
+          ./bin/existing-ccm-test --kubeconfig $KUBECONFIG --verbose
+        fi
 ```
 
-### Jenkins
+## 🛠️ Development
 
-Example Jenkins pipeline:
-
-```groovy
-pipeline {
-    agent any
-    
-    stages {
-        stage('Test') {
-            steps {
-                sh 'go test -v ./pkg/testing/...'
-                sh 'go run cmd/test-runner/main.go -suite=all -verbose'
-            }
-        }
-    }
-}
-```
-
-## Best Practices
-
-### Test Design
-
-1. **Keep tests independent**: Each test should be able to run independently
-2. **Use descriptive names**: Test names should clearly describe what they test
-3. **Handle cleanup properly**: Always clean up resources created during tests
-4. **Use appropriate timeouts**: Set realistic timeouts for cloud operations
-5. **Test error conditions**: Include tests for error scenarios and edge cases
-
-### Resource Management
-
-1. **Track created resources**: Keep track of all resources created during tests
-2. **Implement proper cleanup**: Ensure resources are cleaned up even if tests fail
-3. **Use unique names**: Use unique resource names to avoid conflicts
-4. **Handle timeouts**: Implement proper timeout handling for long-running operations
-
-### Configuration Management
-
-1. **Use environment variables**: Store sensitive configuration in environment variables
-2. **Provide defaults**: Provide sensible defaults for all configuration options
-3. **Validate configuration**: Validate configuration before running tests
-4. **Document configuration**: Document all configuration options and their effects
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Test timeouts**: Increase timeout values for slow cloud operations
-2. **Resource conflicts**: Use unique resource names and proper cleanup
-3. **Authentication issues**: Ensure proper cloud provider authentication
-4. **Network issues**: Check network connectivity and firewall rules
-
-### Debugging
-
-Enable verbose logging to debug issues:
-
+### **Local Development**
 ```bash
-./bin/test-runner -verbose -log-level=debug
+# Setup development environment
+make dev-setup
+
+# Run tests
+make test
+
+# Run e2e tests with mock
+make test-e2e
+
+# Build all binaries
+make build-all
+
+# Run linting
+make lint
+
+# Run all checks
+make check
 ```
 
-### Getting Help
+### **Adding New Cloud Providers**
+1. Implement the `cloudprovider.Interface` for your provider
+2. Create a provider adapter in `pkg/testing/real_cloud_provider.go`
+3. Add provider initialization in `cmd/e2e-test-runner/main.go`
+4. Update the `createCloudProvider` function
 
-- Check the [examples](pkg/testing/integration_test.go) for usage patterns
-- Review the [test implementations](pkg/testing/test_suites.go) for best practices
-- Open an issue in the [repository](https://github.com/kubernetes/ccm-cloudagnostic-tests/issues)
+### **Adding New Test Suites**
+1. Create test functions in `pkg/testing/test_suites.go`
+2. Add test suite creation function
+3. Update the `addTestSuites` function in the test runner
 
-## Contributing
+## 📚 Documentation
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+- **[E2E Testing Guide](docs/e2e-testing-guide.md)**: Detailed guide for e2e testing
+- **[IBM Cloud Implementation Guide](docs/ibmcloud-implementation-guide.md)**: IBM Cloud specific implementation
 
-### Development Setup
+## 🎯 Best Practices
+
+1. **Start with Mock Provider**: Use mock provider for local development and testing
+2. **Test Existing CCM**: Use existing CCM testing for validation without credentials
+3. **Use Resource Prefixes**: Always use unique prefixes to avoid conflicts
+4. **Enable Cleanup**: Always enable cleanup unless debugging
+5. **Monitor Resources**: Keep an eye on cloud provider quotas and limits
+6. **Use Verbose Logging**: Enable verbose output for better debugging
+
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -477,19 +259,6 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 5. Run the test suite
 6. Submit a pull request
 
-### Code Style
+## 📄 License
 
-- Follow Go coding standards
-- Add comments for exported functions
-- Include tests for new functionality
-- Update documentation as needed
-
-## License
-
-This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- Built on top of the [cloud-provider-testing-interface](https://github.com/miyadav/cloud-provider-testing-interface)
-- Inspired by the Kubernetes cloud provider architecture
-- Community contributions and feedback
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
