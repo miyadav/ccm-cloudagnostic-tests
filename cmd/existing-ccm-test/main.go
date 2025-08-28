@@ -42,6 +42,12 @@ var (
 func main() {
 	flag.Parse()
 
+	// Configure verbose logging
+	if *verbose {
+		klog.InitFlags(nil)
+		flag.Set("v", "4")
+	}
+
 	if *kubeconfig == "" {
 		klog.Fatal("--kubeconfig flag is required")
 	}
@@ -73,6 +79,7 @@ func main() {
 		ProviderName: "existing",
 		TestData: map[string]interface{}{
 			"resource-prefix": "existing-ccm-test",
+			"namespace":       *namespace,
 		},
 	})
 

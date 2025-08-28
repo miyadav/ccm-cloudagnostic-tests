@@ -39,10 +39,14 @@ type ExistingCCMTestInterface struct {
 
 // NewExistingCCMTestInterface creates a new test interface for existing CCM
 func NewExistingCCMTestInterface(kubeClient kubernetes.Interface, config *ccmtesting.TestConfig) *ExistingCCMTestInterface {
+	namespace := "ccm-test-" + time.Now().Format("20060102-150405")
+	if ns, ok := config.TestData["namespace"]; ok && ns.(string) != "" {
+		namespace = ns.(string)
+	}
 	return &ExistingCCMTestInterface{
 		kubeClient: kubeClient,
 		config:     config,
-		namespace:  "ccm-test-" + time.Now().Format("20060102-150405"),
+		namespace:  namespace,
 	}
 }
 
@@ -73,12 +77,34 @@ func (e *ExistingCCMTestInterface) TeardownTestEnvironment() error {
 	klog.Infof("Tearing down test environment in namespace: %s", e.namespace)
 
 	// Delete test namespace (this will cascade delete all resources)
-	err := e.kubeClient.CoreV1().Namespaces().Delete(context.Background(), e.namespace, metav1.DeleteOptions{})
+	err := e.kubeClient.CoreV1().Namespaces().Delete(context.Background(), e.namespace, metav1.DeleteOptions{
+		GracePeriodSeconds: func() *int64 { v := int64(0); return &v }(),
+	})
 	if err != nil {
-		return fmt.Errorf("failed to delete test namespace: %w", err)
+		klog.Warningf("Failed to delete test namespace %s: %v", e.namespace, err)
+		// Continue with cleanup even if namespace deletion fails
 	}
 
-	return nil
+	// Wait for namespace to be fully deleted
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			klog.Warningf("Timeout waiting for namespace %s to be deleted", e.namespace)
+			return nil
+		case <-ticker.C:
+			_, err := e.kubeClient.CoreV1().Namespaces().Get(ctx, e.namespace, metav1.GetOptions{})
+			if err != nil {
+				klog.Infof("Namespace %s successfully deleted", e.namespace)
+				return nil
+			}
+		}
+	}
 }
 
 // CreateTestNode creates a test node
