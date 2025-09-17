@@ -1,0 +1,295 @@
+# Prow configuration for CCM Cloud-Agnostic Tests
+# This configuration enables the tests to run in Kubernetes Prow CI/CD
+
+# Test job configuration
+test_jobs:
+  - name: ccm-cloudagnostic-tests-ginkgo
+    description: "Run CCM cloud-agnostic tests using Ginkgo framework"
+    always_run: true
+    optional: false
+    max_concurrency: 10
+    timeout: 30m
+    
+    # Test execution configuration
+    spec:
+      containers:
+        - image: golang:1.24-alpine
+          command:
+            - /bin/sh
+          args:
+            - -c
+            - |
+              set -e
+              apk add --no-cache git make
+              go install github.com/onsi/ginkgo/v2/ginkgo@latest
+              
+              # Clone the repository
+              git clone https://github.com/kubernetes/ccm-cloudagnostic-tests.git
+              cd ccm-cloudagnostic-tests
+              
+              # Download dependencies
+              go mod download
+              
+              # Run tests with JUnit output for Prow
+              make test-ginkgo-prow
+              
+              # Upload test results
+              if [ -f test-results/junit.xml ]; then
+                echo "Test results available at test-results/junit.xml"
+              fi
+              
+              if [ -f coverage.out ]; then
+                echo "Coverage report available at coverage.out"
+              fi
+          
+          env:
+            - name: KUBECONFIG
+              value: "/etc/kubeconfig/config"
+            - name: GO111MODULE
+              value: "on"
+            - name: CGO_ENABLED
+              value: "0"
+          
+          resources:
+            requests:
+              cpu: "1"
+              memory: "2Gi"
+            limits:
+              cpu: "2"
+              memory: "4Gi"
+          
+          volumeMounts:
+            - name: kubeconfig
+              mountPath: /etc/kubeconfig
+              readOnly: true
+      
+      volumes:
+        - name: kubeconfig
+          secret:
+            secretName: kubeconfig
+      
+      # Test environment setup
+      serviceAccountName: ccm-test-runner
+      
+      # Security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+# Post-submit job for release testing
+postsubmit_jobs:
+  - name: ccm-cloudagnostic-tests-release
+    description: "Run CCM tests for release validation"
+    branches:
+      - main
+      - release-*
+    always_run: true
+    optional: false
+    max_concurrency: 5
+    timeout: 45m
+    
+    spec:
+      containers:
+        - image: golang:1.24-alpine
+          command:
+            - /bin/sh
+          args:
+            - -c
+            - |
+              set -e
+              apk add --no-cache git make
+              go install github.com/onsi/ginkgo/v2/ginkgo@latest
+              
+              # Clone the repository
+              git clone https://github.com/kubernetes/ccm-cloudagnostic-tests.git
+              cd ccm-cloudagnostic-tests
+              
+              # Download dependencies
+              go mod download
+              
+              # Run comprehensive tests
+              make test-ginkgo-prow
+              make test-coverage
+              make lint
+              
+              # Build and test binaries
+              make build-all
+              make test-e2e
+          
+          env:
+            - name: KUBECONFIG
+              value: "/etc/kubeconfig/config"
+            - name: GO111MODULE
+              value: "on"
+            - name: CGO_ENABLED
+              value: "0"
+          
+          resources:
+            requests:
+              cpu: "2"
+              memory: "4Gi"
+            limits:
+              cpu: "4"
+              memory: "8Gi"
+          
+          volumeMounts:
+            - name: kubeconfig
+              mountPath: /etc/kubeconfig
+              readOnly: true
+      
+      volumes:
+        - name: kubeconfig
+          secret:
+            secretName: kubeconfig
+
+# Periodic job for continuous testing
+periodic_jobs:
+  - name: ccm-cloudagnostic-tests-periodic
+    description: "Periodic CCM tests to catch regressions"
+    cron: "0 2 * * *"  # Run daily at 2 AM UTC
+    always_run: true
+    optional: false
+    max_concurrency: 3
+    timeout: 60m
+    
+    spec:
+      containers:
+        - image: golang:1.24-alpine
+          command:
+            - /bin/sh
+          args:
+            - -c
+            - |
+              set -e
+              apk add --no-cache git make
+              go install github.com/onsi/ginkgo/v2/ginkgo@latest
+              
+              # Clone the repository
+              git clone https://github.com/kubernetes/ccm-cloudagnostic-tests.git
+              cd ccm-cloudagnostic-tests
+              
+              # Download dependencies
+              go mod download
+              
+              # Run comprehensive test suite
+              make test-ginkgo-prow
+              make test-coverage
+              make lint
+              make build-all
+              
+              # Run tests against multiple cloud providers
+              make test-ginkgo-focus FOCUS="loadbalancer"
+              make test-ginkgo-focus FOCUS="node-management"
+              make test-ginkgo-focus FOCUS="integration"
+          
+          env:
+            - name: KUBECONFIG
+              value: "/etc/kubeconfig/config"
+            - name: GO111MODULE
+              value: "on"
+            - name: CGO_ENABLED
+              value: "0"
+          
+          resources:
+            requests:
+              cpu: "2"
+              memory: "4Gi"
+            limits:
+              cpu: "4"
+              memory: "8Gi"
+          
+          volumeMounts:
+            - name: kubeconfig
+              mountPath: /etc/kubeconfig
+              readOnly: true
+      
+      volumes:
+        - name: kubeconfig
+          secret:
+            secretName: kubeconfig
+
+# Test result reporting configuration
+reporter_config:
+  slack:
+    channel: "#sig-cloud-provider"
+    job_states_to_report:
+      - failure
+      - error
+      - success
+  
+  github:
+    job_states_to_report:
+      - failure
+      - error
+      - success
+    report_template: |
+      Test Results for {{.Job.Name}}:
+      - Status: {{.Status.State}}
+      - Duration: {{.Status.Duration}}
+      - Test Results: [View Details]({{.Status.URL}})
+      
+      {{if .Status.State | eq "failure"}}
+      ❌ Tests failed. Please check the logs for details.
+      {{else if .Status.State | eq "error"}}
+      ⚠️ Test execution error. Please check the logs for details.
+      {{else}}
+      ✅ All tests passed successfully!
+      {{end}}
+
+# Test environment configuration
+test_environment:
+  # Kubernetes cluster configuration
+  kubernetes:
+    version: "1.29"
+    provider: "kind"
+    nodes: 3
+  
+  # Cloud provider configurations for testing
+  cloud_providers:
+    - name: "aws"
+      enabled: true
+      regions: ["us-west-2", "us-east-1"]
+    - name: "gcp"
+      enabled: true
+      regions: ["us-central1", "us-east1"]
+    - name: "azure"
+      enabled: true
+      regions: ["eastus", "westus2"]
+    - name: "ibmcloud"
+      enabled: true
+      regions: ["us-south", "eu-gb"]
+  
+  # Test resource limits
+  resources:
+    max_services: 10
+    max_nodes: 100
+    max_routes: 50
+    test_timeout: "5m"
+    cleanup_timeout: "2m"
+
+# Artifact collection configuration
+artifacts:
+  # Test results
+  - name: "junit.xml"
+    path: "test-results/junit.xml"
+    description: "JUnit XML test results"
+  
+  # Coverage reports
+  - name: "coverage.out"
+    path: "coverage.out"
+    description: "Go test coverage report"
+  
+  - name: "coverage.html"
+    path: "coverage.html"
+    description: "HTML coverage report"
+  
+  # Build artifacts
+  - name: "binaries"
+    path: "bin/"
+    description: "Built test binaries"
+  
+  # Logs
+  - name: "test-logs"
+    path: "test-results/"
+    description: "Test execution logs"

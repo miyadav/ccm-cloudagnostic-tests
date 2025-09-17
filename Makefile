@@ -126,6 +126,74 @@ test-runner-all: build ## Run all test suites
 	@echo "Running all test suites..."
 	./$(BUILD_DIR)/$(BINARY_NAME) --suite=all --verbose
 
+# Ginkgo-based test targets
+.PHONY: test-ginkgo
+test-ginkgo: ## Run Ginkgo tests
+	@echo "Running Ginkgo tests..."
+	cd cmd/existing-ccm-test && ginkgo run --timeout=5m
+
+.PHONY: test-ginkgo-verbose
+test-ginkgo-verbose: ## Run Ginkgo tests with verbose output
+	@echo "Running Ginkgo tests with verbose output..."
+	cd cmd/existing-ccm-test && ginkgo run --timeout=5m -v
+
+.PHONY: test-ginkgo-junit
+test-ginkgo-junit: ## Run Ginkgo tests with JUnit output
+	@echo "Running Ginkgo tests with JUnit output..."
+	@mkdir -p test-results
+	cd cmd/existing-ccm-test && ginkgo run --timeout=5m --junit-report=../../test-results/junit.xml
+
+.PHONY: test-ginkgo-coverage
+test-ginkgo-coverage: ## Run Ginkgo tests with coverage
+	@echo "Running Ginkgo tests with coverage..."
+	cd cmd/existing-ccm-test && ginkgo run --timeout=5m --cover --coverprofile=../../coverage.out
+
+.PHONY: test-ginkgo-focus
+test-ginkgo-focus: ## Run Ginkgo tests with focus (specify FOCUS=pattern)
+	@echo "Running Ginkgo tests with focus: $(FOCUS)"
+	cd cmd/existing-ccm-test && ginkgo run --timeout=5m --focus="$(FOCUS)"
+
+.PHONY: test-ginkgo-skip
+test-ginkgo-skip: ## Run Ginkgo tests with skip (specify SKIP=pattern)
+	@echo "Running Ginkgo tests with skip: $(SKIP)"
+	cd cmd/existing-ccm-test && ginkgo run --timeout=5m --skip="$(SKIP)"
+
+.PHONY: test-ginkgo-labels
+test-ginkgo-labels: ## Run Ginkgo tests with labels (specify LABELS=pattern)
+	@echo "Running Ginkgo tests with labels: $(LABELS)"
+	cd cmd/existing-ccm-test && ginkgo run --timeout=5m --label-filter="$(LABELS)"
+
+.PHONY: test-ginkgo-watch
+test-ginkgo-watch: ## Run Ginkgo tests in watch mode
+	@echo "Running Ginkgo tests in watch mode..."
+	cd cmd/existing-ccm-test && ginkgo watch --timeout=5m
+
+.PHONY: test-ginkgo-dry-run
+test-ginkgo-dry-run: ## Dry run Ginkgo tests (show what would be executed)
+	@echo "Dry running Ginkgo tests..."
+	cd cmd/existing-ccm-test && ginkgo run --dry-run
+
+.PHONY: test-ginkgo-until-it-fails
+test-ginkgo-until-it-fails: ## Run Ginkgo tests until failure
+	@echo "Running Ginkgo tests until failure..."
+	cd cmd/existing-ccm-test && ginkgo run --until-it-fails --timeout=5m
+
+.PHONY: test-ginkgo-repeat
+test-ginkgo-repeat: ## Run Ginkgo tests multiple times (specify REPEAT=count)
+	@echo "Running Ginkgo tests $(REPEAT) times..."
+	cd cmd/existing-ccm-test && ginkgo run --repeat=$(REPEAT) --timeout=5m
+
+.PHONY: test-ginkgo-flake-attempts
+test-ginkgo-flake-attempts: ## Run Ginkgo tests with flake attempts (specify ATTEMPTS=count)
+	@echo "Running Ginkgo tests with $(ATTEMPTS) flake attempts..."
+	cd cmd/existing-ccm-test && ginkgo run --flake-attempts=$(ATTEMPTS) --timeout=5m
+
+.PHONY: test-ginkgo-prow
+test-ginkgo-prow: ## Run Ginkgo tests in Prow-compatible mode
+	@echo "Running Ginkgo tests in Prow-compatible mode..."
+	@mkdir -p test-results
+	cd cmd/existing-ccm-test && ginkgo run --timeout=5m --junit-report=../../test-results/junit.xml --cover --coverprofile=../../coverage.out --output-dir=../../test-results
+
 .PHONY: lint
 lint: ## Run linter
 	@echo "Running linter..."

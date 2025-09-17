@@ -1,0 +1,361 @@
+name: CCM Cloud-Agnostic Tests (Ginkgo)
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'cmd/existing-ccm-test/**'
+      - 'pkg/testing/**'
+      - 'go.mod'
+      - 'go.sum'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'cmd/existing-ccm-test/**'
+      - 'pkg/testing/**'
+      - 'go.mod'
+      - 'go.sum'
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  GO_VERSION: '1.24'
+  GINKGO_VERSION: 'v2.17.3'
+  GOMEGA_VERSION: 'v1.33.1'
+
+jobs:
+  # Unit tests and linting
+  test:
+    name: Unit Tests & Linting
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache: true
+        
+    - name: Install Ginkgo
+      run: go install github.com/onsi/ginkgo/v2/ginkgo@${{ env.GINKGO_VERSION }}
+      
+    - name: Download dependencies
+      run: go mod download
+      
+    - name: Verify dependencies
+      run: go mod verify
+      
+    - name: Run linter
+      run: |
+        go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+        golangci-lint run --timeout=5m
+        
+    - name: Run unit tests
+      run: |
+        cd cmd/existing-ccm-test
+        ginkgo run --timeout=5m --cover --coverprofile=../../coverage.out
+        
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.out
+        flags: unittests
+        name: codecov-umbrella
+
+  # Integration tests with mock provider
+  integration-tests:
+    name: Integration Tests (Mock Provider)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache: true
+        
+    - name: Install Ginkgo
+      run: go install github.com/onsi/ginkgo/v2/ginkgo@${{ env.GINKGO_VERSION }}
+      
+    - name: Download dependencies
+      run: go mod download
+      
+    - name: Run integration tests with mock provider
+      run: |
+        cd cmd/existing-ccm-test
+        ginkgo run --timeout=5m --junit-report=../../test-results/junit.xml --label-filter="integration"
+        
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-mock
+        path: test-results/
+        retention-days: 30
+
+  # Load balancer tests
+  loadbalancer-tests:
+    name: Load Balancer Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache: true
+        
+    - name: Install Ginkgo
+      run: go install github.com/onsi/ginkgo/v2/ginkgo@${{ env.GINKGO_VERSION }}
+      
+    - name: Download dependencies
+      run: go mod download
+      
+    - name: Run load balancer tests
+      run: |
+        cd cmd/existing-ccm-test
+        ginkgo run --timeout=5m --junit-report=../../test-results/junit.xml --label-filter="loadbalancer"
+        
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-loadbalancer
+        path: test-results/
+        retention-days: 30
+
+  # Node management tests
+  node-management-tests:
+    name: Node Management Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache: true
+        
+    - name: Install Ginkgo
+      run: go install github.com/onsi/ginkgo/v2/ginkgo@${{ env.GINKGO_VERSION }}
+      
+    - name: Download dependencies
+      run: go mod download
+      
+    - name: Run node management tests
+      run: |
+        cd cmd/existing-ccm-test
+        ginkgo run --timeout=5m --junit-report=../../test-results/junit.xml --label-filter="node-management"
+        
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results-node-management
+        path: test-results/
+        retention-days: 30
+
+  # Build and test binaries
+  build-test:
+    name: Build & Test Binaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache: true
+        
+    - name: Download dependencies
+      run: go mod download
+      
+    - name: Build binaries
+      run: make build-all
+      
+    - name: Test binaries
+      run: |
+        # Test the existing CCM test binary
+        ./bin/existing-ccm-test --help
+        
+    - name: Upload binaries
+      uses: actions/upload-artifact@v4
+      with:
+        name: built-binaries
+        path: bin/
+        retention-days: 7
+
+  # Security scanning
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache: true
+        
+    - name: Run Gosec Security Scanner
+      uses: securecodewarrior/github-action-gosec@master
+      with:
+        args: '-fmt sarif -out gosec.sarif ./...'
+        
+    - name: Upload SARIF file
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: gosec.sarif
+
+  # Performance tests
+  performance:
+    name: Performance Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: test
+    if: github.event_name == 'schedule' || github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.GO_VERSION }}
+        cache: true
+        
+    - name: Install Ginkgo
+      run: go install github.com/onsi/ginkgo/v2/ginkgo@${{ env.GINKGO_VERSION }}
+      
+    - name: Download dependencies
+      run: go mod download
+      
+    - name: Run performance tests
+      run: |
+        cd cmd/existing-ccm-test
+        ginkgo run --timeout=10m --junit-report=../../test-results/junit.xml --repeat=3 --label-filter="performance"
+        
+    - name: Upload performance results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: performance-results
+        path: test-results/
+        retention-days: 30
+
+  # Test summary and reporting
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [test, integration-tests, loadbalancer-tests, node-management-tests, build-test, security]
+    if: always()
+    
+    steps:
+    - name: Download all test results
+      uses: actions/download-artifact@v4
+      with:
+        path: all-results/
+        
+    - name: Generate test summary
+      run: |
+        echo "# Test Results Summary" > test-summary.md
+        echo "" >> test-summary.md
+        echo "## Job Results" >> test-summary.md
+        echo "" >> test-summary.md
+        
+        # Check each job result
+        if [ "${{ needs.test.result }}" == "success" ]; then
+          echo "✅ Unit Tests & Linting: PASSED" >> test-summary.md
+        else
+          echo "❌ Unit Tests & Linting: FAILED" >> test-summary.md
+        fi
+        
+        if [ "${{ needs.integration-tests.result }}" == "success" ]; then
+          echo "✅ Integration Tests: PASSED" >> test-summary.md
+        else
+          echo "❌ Integration Tests: FAILED" >> test-summary.md
+        fi
+        
+        if [ "${{ needs.loadbalancer-tests.result }}" == "success" ]; then
+          echo "✅ Load Balancer Tests: PASSED" >> test-summary.md
+        else
+          echo "❌ Load Balancer Tests: FAILED" >> test-summary.md
+        fi
+        
+        if [ "${{ needs.node-management-tests.result }}" == "success" ]; then
+          echo "✅ Node Management Tests: PASSED" >> test-summary.md
+        else
+          echo "❌ Node Management Tests: FAILED" >> test-summary.md
+        fi
+        
+        if [ "${{ needs.build-test.result }}" == "success" ]; then
+          echo "✅ Build & Test Binaries: PASSED" >> test-summary.md
+        else
+          echo "❌ Build & Test Binaries: FAILED" >> test-summary.md
+        fi
+        
+        if [ "${{ needs.security.result }}" == "success" ]; then
+          echo "✅ Security Scan: PASSED" >> test-summary.md
+        else
+          echo "❌ Security Scan: FAILED" >> test-summary.md
+        fi
+        
+        echo "" >> test-summary.md
+        echo "## Artifacts" >> test-summary.md
+        echo "" >> test-summary.md
+        echo "- Test results are available in the workflow artifacts" >> test-summary.md
+        echo "- Coverage reports are uploaded to Codecov" >> test-summary.md
+        echo "- Security scan results are available in the Security tab" >> test-summary.md
+        
+    - name: Upload test summary
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-summary
+        path: test-summary.md
+        retention-days: 30
+        
+    - name: Comment PR with test results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          const summary = fs.readFileSync('test-summary.md', 'utf8');
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: summary
+          });
