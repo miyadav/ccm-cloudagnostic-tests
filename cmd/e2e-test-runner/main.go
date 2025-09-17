@@ -37,7 +37,7 @@ import (
 var (
 	// Test configuration
 	kubeconfig     = flag.String("kubeconfig", "", "Path to kubeconfig file")
-	provider       = flag.String("provider", "", "Cloud provider (aws, gcp, azure, ibmcloud, mock, existing)")
+	provider       = flag.String("provider", "", "Cloud provider (aws, gcp, azure, mock, existing)")
 	region         = flag.String("region", "", "Cloud provider region")
 	zone           = flag.String("zone", "", "Cloud provider zone")
 	clusterName    = flag.String("cluster", "", "Cluster name")
@@ -71,7 +71,7 @@ func main() {
 	}
 
 	if *provider != "mock" && *provider != "existing" && *kubeconfig == "" {
-		klog.Fatal("--kubeconfig flag is required for real cloud providers (aws, gcp, azure, ibmcloud)")
+		klog.Fatal("--kubeconfig flag is required for real cloud providers (aws, gcp, azure)")
 	}
 
 	// Create Kubernetes client
@@ -206,8 +206,6 @@ func createCloudProvider(providerName string, kubeClient kubernetes.Interface) (
 		return createGCPCloudProvider(kubeClient)
 	case "azure":
 		return createAzureCloudProvider(kubeClient)
-	case "ibmcloud":
-		return createIBMCloudProvider(kubeClient)
 	default:
 		return nil, fmt.Errorf("unsupported cloud provider: %s", providerName)
 	}
@@ -301,37 +299,6 @@ func createAzureCloudProvider(kubeClient kubernetes.Interface) (cloudprovider.In
 	// Initialize the adapter
 	if err := adapter.Initialize(); err != nil {
 		return nil, fmt.Errorf("failed to initialize Azure cloud provider: %w", err)
-	}
-
-	return adapter.GetCloudProvider(), nil
-}
-
-func createIBMCloudProvider(kubeClient kubernetes.Interface) (cloudprovider.Interface, error) {
-	// Load IBM Cloud credentials
-	credentials, err := loadCredentials(*credentialsFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to load IBM Cloud credentials: %w", err)
-	}
-
-	config := &testing.RealCloudProviderConfig{
-		ProviderName:     "ibmcloud",
-		Region:           *region,
-		Zone:             *zone,
-		ClusterName:      *clusterName,
-		Credentials:      credentials,
-		TestTimeout:      int(timeout.Minutes()),
-		CleanupResources: *cleanup,
-		ResourcePrefix:   *resourcePrefix,
-	}
-
-	adapter, err := testing.NewIBMCloudProviderAdapter(kubeClient, config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create IBM Cloud provider adapter: %w", err)
-	}
-
-	// Initialize the adapter
-	if err := adapter.Initialize(); err != nil {
-		return nil, fmt.Errorf("failed to initialize IBM Cloud provider: %w", err)
 	}
 
 	return adapter.GetCloudProvider(), nil

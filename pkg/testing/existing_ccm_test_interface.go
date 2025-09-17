@@ -365,7 +365,7 @@ func TestNodeManagement(ti *ExistingCCMTestInterface) error {
 	// Create a test node
 	nodeConfig := &ccmtesting.TestNodeConfig{
 		Name:       "test-node",
-		ProviderID: "ibmcloud://us-south-1/test-node-id",
+		ProviderID: "aws://us-west-2a/test-node-id",
 		Addresses: []v1.NodeAddress{
 			{
 				Type:    v1.NodeInternalIP,

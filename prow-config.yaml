@@ -256,9 +256,6 @@ test_environment:
     - name: "azure"
       enabled: true
       regions: ["eastus", "westus2"]
-    - name: "ibmcloud"
-      enabled: true
-      regions: ["us-south", "eu-gb"]
   
   # Test resource limits
   resources:

@@ -6,6 +6,8 @@ This document explains the comprehensive refactoring of the CCM Cloud-Agnostic T
 
 The refactoring transforms the existing custom test framework into a modern, standards-compliant testing solution that integrates seamlessly with Kubernetes CI/CD pipelines, particularly Prow.
 
+> **📖 For basic usage and quick start, see the [main README](../README.md).**
+
 ## Key Changes
 
 ### 1. **Dependency Updates**
@@ -276,52 +278,19 @@ jobs:
 
 ## Usage Examples
 
-### Running Tests Locally
+> **📖 For complete usage examples, see the [main README](../README.md).**
+
+### Quick Reference
 
 ```bash
 # Run all tests
 make test-ginkgo
 
-# Run tests with verbose output
-make test-ginkgo-verbose
-
-# Run tests with JUnit output
+# Run with JUnit output for CI/CD
 make test-ginkgo-junit
 
-# Run specific test labels
-make test-ginkgo-labels LABELS="loadbalancer"
-
-# Run tests in Prow-compatible mode
-make test-ginkgo-prow
-```
-
-### Running Tests in CI/CD
-
-```bash
-# GitHub Actions
-# Tests run automatically on push/PR
-
-# Prow
-# Tests run based on prow-config.yaml configuration
-
-# Local CI simulation
-make test-ginkgo-prow
-```
-
-### Test Filtering
-
-```bash
-# Run only load balancer tests
+# Run specific test categories
 ginkgo run --label-filter="loadbalancer"
-
-# Run only node management tests
-ginkgo run --label-filter="node-management"
-
-# Run only integration tests
-ginkgo run --label-filter="integration"
-
-# Skip specific tests
-ginkgo run --skip="slow"
 ```
 
 ## Benefits of the Refactoring

@@ -1,8 +1,26 @@
-# CCM E2E Testing Guide - Advanced Usage
+# CCM E2E Testing Guide - Legacy Framework
 
-This guide provides detailed technical information for advanced usage of the CCM Cloud-Agnostic Testing Framework.
+This guide provides detailed technical information for the **legacy e2e test runner** in the CCM Cloud-Agnostic Testing Framework.
 
-> **Note**: For basic usage and quick start, see the [main README](../README.md).
+> **⚠️ Note**: This guide covers the legacy e2e test runner. For the modern Ginkgo-based tests, see the [Ginkgo Refactoring Guide](ginkgo-refactoring-guide.md) and [main README](../README.md).
+
+## When to Use This Guide
+
+- **Legacy Support**: Maintaining existing CI/CD pipelines that use the e2e test runner
+- **Provider Development**: Adding new cloud providers to the legacy framework
+- **Advanced Configuration**: Complex test configurations not available in Ginkgo tests
+- **Migration Reference**: Understanding the legacy framework before migrating to Ginkgo
+
+## Quick Comparison
+
+| Feature | Legacy E2E Runner | Modern Ginkgo Tests |
+|---------|------------------|-------------------|
+| **Test Organization** | Custom framework | Standard BDD structure |
+| **Assertions** | Manual error handling | Rich Gomega matchers |
+| **CI/CD Integration** | Basic | JUnit reports, Prow support |
+| **Test Discovery** | Manual | Automatic with labels |
+| **Maintenance** | Custom code | Industry standard |
+| **Recommendation** | Legacy support only | ✅ **Use this** |
 
 ## 🏗️ Architecture Deep Dive
 
@@ -84,23 +102,16 @@ You can pass custom configuration through the `TestData` field:
 
 ## 🧪 Advanced Testing Patterns
 
-### **1. Testing Existing CCM (Recommended)**
+### **1. Testing Existing CCM (Legacy)**
 
-This approach tests your running CCM without requiring cloud credentials:
+This approach tests your running CCM using the legacy e2e test runner:
 
 ```bash
-# Simple test of existing CCM
-./bin/existing-ccm-test --kubeconfig ~/.kube/config --verbose
-
 # Full e2e test runner with existing CCM
 ./bin/e2e-test-runner --provider existing --kubeconfig ~/.kube/config --suite all --verbose
 ```
 
-**Benefits**:
-- ✅ No cloud credentials required
-- ✅ Tests actual production CCM
-- ✅ No additional infrastructure costs
-- ✅ Realistic testing environment
+> **Note**: For modern testing, use the Ginkgo-based tests instead of the legacy e2e test runner.
 
 ### **2. Testing with Mock Provider**
 

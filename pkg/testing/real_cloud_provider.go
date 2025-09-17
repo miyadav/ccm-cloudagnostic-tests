@@ -220,32 +220,6 @@ func NewAzureCloudProviderAdapter(kubeClient kubernetes.Interface, config *RealC
 	return adapter, nil
 }
 
-// Example: IBM Cloud Provider Implementation
-type IBMCloudProviderAdapter struct {
-	*RealCloudProviderAdapter
-	// IBM Cloud-specific fields
-	ibmRegion        string
-	ibmResourceGroup string
-	ibmClusterID     string
-}
-
-func NewIBMCloudProviderAdapter(kubeClient kubernetes.Interface, config *RealCloudProviderConfig) (*IBMCloudProviderAdapter, error) {
-	// Initialize IBM Cloud provider
-	ibmProvider, err := initializeIBMCloudProvider(config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize IBM Cloud provider: %w", err)
-	}
-
-	adapter := &IBMCloudProviderAdapter{
-		RealCloudProviderAdapter: NewRealCloudProviderAdapter(ibmProvider, kubeClient, config),
-		ibmRegion:                config.Region,
-		ibmResourceGroup:         config.Credentials["resource-group"],
-		ibmClusterID:             config.Credentials["cluster-id"],
-	}
-
-	return adapter, nil
-}
-
 // Placeholder functions for cloud provider initialization
 // These would be implemented based on your specific cloud provider setup
 
@@ -265,10 +239,4 @@ func initializeAzureCloudProvider(config *RealCloudProviderConfig) (cloudprovide
 	// Implementation would depend on your Azure cloud provider setup
 	// Example: return azure.NewCloudProvider(config.Credentials)
 	return nil, fmt.Errorf("Azure cloud provider initialization not implemented")
-}
-
-func initializeIBMCloudProvider(config *RealCloudProviderConfig) (cloudprovider.Interface, error) {
-	// Implementation would depend on your IBM Cloud provider setup
-	// Example: return ibmcloud.NewCloudProvider(config.Credentials)
-	return nil, fmt.Errorf("IBM Cloud provider initialization not implemented")
 }
