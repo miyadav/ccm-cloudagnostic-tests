@@ -24,6 +24,10 @@ import (
 	"k8s.io/klog/v2"
 )
 
+var (
+	verbose = flag.Bool("verbose", false, "Enable verbose output")
+)
+
 func TestMain(m *testing.M) {
 	// Parse flags before running tests
 	flag.Parse()
@@ -37,4 +41,22 @@ func TestMain(m *testing.M) {
 	// Run tests
 	code := m.Run()
 	os.Exit(code)
+}
+
+// main function for standalone binary usage
+func main() {
+	// This binary is primarily designed to be run with 'go test' for Ginkgo tests
+	// For standalone usage, it will just show help information
+	flag.Parse()
+
+	if len(os.Args) == 1 {
+		// No arguments provided, show usage
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	// If run as standalone binary, show information about Ginkgo usage
+	klog.Info("This binary is designed to be run with 'go test' for Ginkgo-based tests.")
+	klog.Info("For standalone testing, use: go test -v --kubeconfig <path>")
+	klog.Info("For more options, see the Makefile targets: make test-ginkgo-*")
 }

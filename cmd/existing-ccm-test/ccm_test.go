@@ -40,7 +40,6 @@ var (
 	kubeconfig = flag.String("kubeconfig", "", "Path to kubeconfig file")
 	namespace  = flag.String("namespace", "ccm-test", "Namespace for testing")
 	timeout    = flag.Duration("timeout", 5*time.Minute, "Test timeout")
-	verbose    = flag.Bool("verbose", false, "Enable verbose output")
 	junitFile  = flag.String("junit-file", "", "Path to JUnit XML output file")
 )
 
