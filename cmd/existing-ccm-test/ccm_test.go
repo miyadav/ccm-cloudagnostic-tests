@@ -75,6 +75,11 @@ var _ = BeforeSuite(func() {
 		}
 	}
 
+	// Check if we're in CI environment (no kubeconfig provided)
+	if *kubeconfig == "" {
+		Skip("Skipping tests for github actions environment - no kubeconfig provided")
+	}
+
 	// Validate required flags
 	Expect(*kubeconfig).NotTo(BeEmpty(), "kubeconfig flag is required")
 
