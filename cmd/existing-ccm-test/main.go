@@ -35,7 +35,9 @@ func TestMain(m *testing.M) {
 	// Configure verbose logging if requested
 	if *verbose {
 		klog.InitFlags(nil)
-		flag.Set("v", "4")
+		if err := flag.Set("v", "4"); err != nil {
+			klog.Warningf("Failed to set verbose flag: %v", err)
+		}
 	}
 
 	// Run tests

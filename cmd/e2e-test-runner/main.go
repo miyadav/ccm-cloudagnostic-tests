@@ -130,7 +130,9 @@ func main() {
 	}
 	defer func() {
 		klog.Info("Tearing down test environment...")
-		testImpl.TeardownTestEnvironment()
+		if err := testImpl.TeardownTestEnvironment(); err != nil {
+			klog.Warningf("Failed to teardown test environment: %v", err)
+		}
 	}()
 
 	// Create test runner

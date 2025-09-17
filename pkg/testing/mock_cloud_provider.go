@@ -40,7 +40,6 @@ type MockCloudProvider struct {
 	nodes    map[string]*v1.Node
 	services map[string]*v1.Service
 	routeMap map[string]*cloudprovider.Route
-	mu       sync.RWMutex
 }
 
 // NewMockCloudProvider creates a new mock cloud provider.
@@ -167,7 +166,6 @@ func (m *MockInstances) InstanceShutdownByProviderID(ctx context.Context, provid
 
 // MockZones implements the cloudprovider.Zones interface.
 type MockZones struct {
-	mu sync.RWMutex
 }
 
 // NewMockZones creates a new mock zones interface.
@@ -292,7 +290,6 @@ func (m *MockRoutes) DeleteRoute(ctx context.Context, clusterName string, route 
 
 // MockClusters implements the cloudprovider.Clusters interface.
 type MockClusters struct {
-	mu sync.RWMutex
 }
 
 // NewMockClusters creates a new mock clusters interface.

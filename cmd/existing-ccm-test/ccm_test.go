@@ -70,7 +70,9 @@ var _ = BeforeSuite(func() {
 	// Configure verbose logging
 	if *verbose {
 		klog.InitFlags(nil)
-		flag.Set("v", "4")
+		if err := flag.Set("v", "4"); err != nil {
+			klog.Warningf("Failed to set verbose flag: %v", err)
+		}
 	}
 
 	// Validate required flags
