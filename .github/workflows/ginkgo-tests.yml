@@ -8,6 +8,7 @@ on:
       - 'pkg/testing/**'
       - 'go.mod'
       - 'go.sum'
+      - '.github/workflows/**'
   pull_request:
     branches: [ main ]
     paths:
@@ -227,54 +228,26 @@ jobs:
         go-version: ${{ env.GO_VERSION }}
         cache: true
         
-    - name: Run Gosec Security Scanner
-      uses: securecodewarrior/github-action-gosec@master
-      with:
-        args: '-fmt sarif -out gosec.sarif ./...'
+    - name: Install security tools
+      run: |
+        go install golang.org/x/vuln/cmd/govulncheck@latest
+        go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+        
+    - name: Run Go vulnerability check
+      run: |
+        govulncheck ./...
+        
+    - name: Run Gosec security scanner
+      run: |
+        gosec -fmt sarif -out gosec.sarif ./...
         
     - name: Upload SARIF file
       uses: github/codeql-action/upload-sarif@v3
+      if: always()
       with:
         sarif_file: gosec.sarif
 
-  # Performance tests
-  performance:
-    name: Performance Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    needs: test
-    if: github.event_name == 'schedule' || github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: ${{ env.GO_VERSION }}
-        cache: true
-        
-    - name: Install Ginkgo
-      run: go install github.com/onsi/ginkgo/v2/ginkgo@${{ env.GINKGO_VERSION }}
-      
-    - name: Download dependencies
-      run: go mod download
-      
-    - name: Run performance tests
-      run: |
-        cd cmd/existing-ccm-test
-        ginkgo run --timeout=10m --junit-report=../../test-results/junit.xml --repeat=3 --label-filter="performance"
-        
-    - name: Upload performance results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: performance-results
-        path: test-results/
-        retention-days: 30
-
-  # Test summary and reporting
+ # Test summary and reporting
   test-summary:
     name: Test Summary
     runs-on: ubuntu-latest

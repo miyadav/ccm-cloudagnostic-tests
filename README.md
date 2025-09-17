@@ -25,8 +25,7 @@ make build-all
 #### **New Ginkgo-Based Tests (Recommended)**
 ```bash
 # Using Ginkgo CLI (best experience)
-cd cmd/existing-ccm-test
-ginkgo run -v -- --kubeconfig ~/.kube/config
+cd cmd/existing-ccm-test && ginkgo run -v -- --kubeconfig ~/.kube/config
 
 # Using Go test (standard)
 cd cmd/existing-ccm-test
