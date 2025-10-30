@@ -3,7 +3,7 @@ module github.com/kubernetes/ccm-cloudagnostic-tests
 go 1.24.0
 
 require (
-	github.com/miyadav/cloud-provider-testing-interface v0.0.0
+	github.com/miyadav/cloud-provider-testing-interface v0.1.0-alpha
 	github.com/onsi/ginkgo/v2 v2.21.0
 	github.com/onsi/gomega v1.35.1
 	k8s.io/api v0.33.4
@@ -12,8 +12,6 @@ require (
 	k8s.io/cloud-provider v0.33.3
 	k8s.io/klog/v2 v2.130.1
 )
-
-replace github.com/miyadav/cloud-provider-testing-interface => ./third_party/github.com/miyadav/cloud-provider-testing-interface
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect

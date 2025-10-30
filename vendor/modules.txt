@@ -60,7 +60,7 @@ github.com/json-iterator/go
 github.com/mailru/easyjson/buffer
 github.com/mailru/easyjson/jlexer
 github.com/mailru/easyjson/jwriter
-# github.com/miyadav/cloud-provider-testing-interface v0.0.0 => ./third_party/github.com/miyadav/cloud-provider-testing-interface
+# github.com/miyadav/cloud-provider-testing-interface v0.1.0-alpha
 ## explicit; go 1.24.0
 github.com/miyadav/cloud-provider-testing-interface
 # github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
@@ -701,4 +701,3 @@ sigs.k8s.io/structured-merge-diff/v4/value
 ## explicit; go 1.12
 sigs.k8s.io/yaml
 sigs.k8s.io/yaml/goyaml.v2
-# github.com/miyadav/cloud-provider-testing-interface => ./third_party/github.com/miyadav/cloud-provider-testing-interface

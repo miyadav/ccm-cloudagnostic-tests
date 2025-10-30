@@ -317,6 +317,13 @@ func loadCredentials(credentialsFile string) (map[string]string, error) {
 }
 
 func addTestSuites(runner *ccmtesting.TestRunner, suite, provider string) {
+	// For existing CCM, use test suites that test indirectly via Kubernetes resources
+	if provider == "existing" {
+		addExistingCCMTestSuites(runner, suite)
+		return
+	}
+
+	// For direct cloud provider testing, use test suites that access cloud provider interface directly
 	switch strings.ToLower(suite) {
 	case "all":
 		runner.AddTestSuite(testing.CreateLoadBalancerTestSuite())
@@ -339,6 +346,28 @@ func addTestSuites(runner *ccmtesting.TestRunner, suite, provider string) {
 		runner.AddTestSuite(testing.CreateClustersTestSuite())
 	default:
 		klog.Fatalf("Unknown test suite: %s", suite)
+	}
+}
+
+func addExistingCCMTestSuites(runner *ccmtesting.TestRunner, suite string) {
+	klog.Infof("Using existing CCM test suites (tests via Kubernetes resources)")
+
+	switch strings.ToLower(suite) {
+	case "all":
+		runner.AddTestSuite(testing.CreateExistingCCMLoadBalancerTestSuite())
+		runner.AddTestSuite(testing.CreateExistingCCMNodeTestSuite())
+		klog.Info("Added test suites: LoadBalancer, NodeManagement")
+		klog.Info("Note: Route, Instances, Zones, and Clusters tests are only available for direct cloud provider testing")
+	case "loadbalancer":
+		runner.AddTestSuite(testing.CreateExistingCCMLoadBalancerTestSuite())
+	case "nodes":
+		runner.AddTestSuite(testing.CreateExistingCCMNodeTestSuite())
+	case "routes", "instances", "zones", "clusters":
+		klog.Warningf("Test suite '%s' is not available for existing CCM testing", suite)
+		klog.Warning("Available suites for existing CCM: all, loadbalancer, nodes")
+		klog.Fatalf("Please select an available test suite")
+	default:
+		klog.Fatalf("Unknown test suite: %s. Available for existing CCM: all, loadbalancer, nodes", suite)
 	}
 }
 
