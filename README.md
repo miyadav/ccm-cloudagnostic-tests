@@ -3,6 +3,8 @@
 A comprehensive, cloud-agnostic testing framework for Kubernetes Cloud Controller Manager (CCM) functionality across different cloud providers.
 It uses - https://github.com/miyadav/cloud-provider-testing-interface/ as interface to create tests
 
+> **⚠️ Important**: This framework is provided for testing and validation purposes. Users should thoroughly test in their own environments and validate that the behavior matches their specific requirements before integrating into critical workflows.
+
 ## 🚀 Quick Start
 
 ### 1. Build the Framework
@@ -29,10 +31,13 @@ cd cmd/existing-ccm-test && ginkgo run -v -- --kubeconfig ~/.kube/config
 
 # Using Go test (standard)
 cd cmd/existing-ccm-test
-go test -v --kubeconfig ~/.kube/config
+go test -v --kubeconfig $HOME/.kube/config
 
-# Using Makefile targets
-make test-ginkgo-verbose --kubeconfig ~/.kube/config
+# Using Makefile targets (uses default $HOME/.kube/config)
+make test-ginkgo-verbose
+
+# Or specify custom path
+make test-ginkgo-verbose KUBECONFIG=$HOME/.kube/config
 ```
 
 #### **Legacy E2E Test Runner**
@@ -80,11 +85,13 @@ make test-ginkgo-verbose --kubeconfig ~/.kube/config
 - **Zones**: Information retrieval
 - **Clusters**: Listing and master node detection
 
-### ✅ **Production Ready**
-- Resource cleanup and management
-- Error handling and reporting
+### ✅ **Robust Testing Features**
+- **Automatic Resource Cleanup**: Tests clean up leftover resources from previous runs automatically
+- Comprehensive error handling and reporting
 - CI/CD integration with Prow support
-- Comprehensive documentation
+- Extensive documentation and examples
+
+> **Note**: This framework is provided for testing purposes. Users should thoroughly test in their own environments before relying on it for critical workflows.
 
 ## 🏗️ Architecture
 
@@ -143,9 +150,9 @@ go test -v --kubeconfig ~/.kube/config
 cd cmd/existing-ccm-test
 ginkgo run --junit-report=../../test-results/junit.xml -- --kubeconfig ~/.kube/config
 
-# Using Makefile targets
-make test-ginkgo-verbose --kubeconfig ~/.kube/config
-make test-ginkgo-junit --kubeconfig ~/.kube/config
+# Using Makefile targets (default is $HOME/.kube/config)
+make test-ginkgo-verbose
+make test-ginkgo-junit
 ```
 
 ### **Legacy E2E Test Runner**
@@ -316,9 +323,9 @@ jobs:
 # Setup development environment
 make dev-setup
 
-# Run Ginkgo tests (recommended)
-make test-ginkgo-verbose --kubeconfig ~/.kube/config
-make test-ginkgo-junit --kubeconfig ~/.kube/config
+# Run Ginkgo tests (recommended - uses default $HOME/.kube/config)
+make test-ginkgo-verbose
+make test-ginkgo-junit
 
 # Run legacy tests
 make test
@@ -357,6 +364,7 @@ make check
 
 - **[Ginkgo Refactoring Guide](docs/ginkgo-refactoring-guide.md)**: Complete guide to the new Ginkgo-based testing framework
 - **[E2E Testing Guide](docs/e2e-testing-guide.md)**: Detailed guide for legacy e2e testing
+- **[Automatic Resource Cleanup](docs/automatic-resource-cleanup.md)**: How tests automatically clean up leftover resources
 
 ## 🎯 Best Practices
 

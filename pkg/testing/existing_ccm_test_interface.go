@@ -32,9 +32,10 @@ import (
 
 // ExistingCCMTestInterface tests CCM functionality using the existing CCM in the cluster
 type ExistingCCMTestInterface struct {
-	kubeClient kubernetes.Interface
-	config     *ccmtesting.TestConfig
-	namespace  string
+	kubeClient  kubernetes.Interface
+	config      *ccmtesting.TestConfig
+	namespace   string
+	testResults *ccmtesting.TestResults
 }
 
 // NewExistingCCMTestInterface creates a new test interface for existing CCM
@@ -44,9 +45,10 @@ func NewExistingCCMTestInterface(kubeClient kubernetes.Interface, config *ccmtes
 		namespace = ns.(string)
 	}
 	return &ExistingCCMTestInterface{
-		kubeClient: kubeClient,
-		config:     config,
-		namespace:  namespace,
+		kubeClient:  kubeClient,
+		config:      config,
+		namespace:   namespace,
+		testResults: &ccmtesting.TestResults{},
 	}
 }
 
@@ -54,6 +56,48 @@ func NewExistingCCMTestInterface(kubeClient kubernetes.Interface, config *ccmtes
 func (e *ExistingCCMTestInterface) SetupTestEnvironment(config *ccmtesting.TestConfig) error {
 	klog.Infof("Setting up test environment in namespace: %s", e.namespace)
 
+	ctx := context.Background()
+
+	// Check if namespace already exists
+	_, err := e.kubeClient.CoreV1().Namespaces().Get(ctx, e.namespace, metav1.GetOptions{})
+	if err == nil {
+		// Namespace exists, delete it first
+		klog.Warningf("Namespace %s already exists from previous run, cleaning it up first...", e.namespace)
+
+		// Delete the namespace
+		err = e.kubeClient.CoreV1().Namespaces().Delete(ctx, e.namespace, metav1.DeleteOptions{
+			GracePeriodSeconds: func() *int64 { v := int64(0); return &v }(),
+		})
+		if err != nil {
+			return fmt.Errorf("failed to delete existing test namespace: %w", err)
+		}
+
+		// Wait for namespace to be fully deleted
+		deleteCtx, cancel := context.WithTimeout(ctx, 60*time.Second)
+		defer cancel()
+
+		ticker := time.NewTicker(2 * time.Second)
+		defer ticker.Stop()
+
+		klog.Infof("Waiting for namespace %s to be fully deleted...", e.namespace)
+		for {
+			select {
+			case <-deleteCtx.Done():
+				return fmt.Errorf("timeout waiting for namespace %s to be deleted", e.namespace)
+			case <-ticker.C:
+				_, err := e.kubeClient.CoreV1().Namespaces().Get(deleteCtx, e.namespace, metav1.GetOptions{})
+				if err != nil {
+					// Namespace is gone
+					klog.Infof("Namespace %s successfully deleted", e.namespace)
+					goto createNamespace
+				}
+			}
+		}
+	} else {
+		klog.Infof("Namespace %s does not exist, creating fresh...", e.namespace)
+	}
+
+createNamespace:
 	// Create test namespace
 	namespace := &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -64,11 +108,12 @@ func (e *ExistingCCMTestInterface) SetupTestEnvironment(config *ccmtesting.TestC
 		},
 	}
 
-	_, err := e.kubeClient.CoreV1().Namespaces().Create(context.Background(), namespace, metav1.CreateOptions{})
+	_, err = e.kubeClient.CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to create test namespace: %w", err)
 	}
 
+	klog.Infof("✅ Test namespace %s created successfully", e.namespace)
 	return nil
 }
 
@@ -297,7 +342,7 @@ func (e *ExistingCCMTestInterface) GetCloudProvider() cloudprovider.Interface {
 
 // ResetTestState resets the test state
 func (e *ExistingCCMTestInterface) ResetTestState() error {
-	// Implementation would reset test state
+	e.testResults = &ccmtesting.TestResults{}
 	return nil
 }
 
@@ -317,8 +362,7 @@ func (e *ExistingCCMTestInterface) GetExistingNodes() ([]v1.Node, error) {
 
 // GetTestResults returns test results
 func (e *ExistingCCMTestInterface) GetTestResults() *ccmtesting.TestResults {
-	// Implementation would track test results
-	return &ccmtesting.TestResults{}
+	return e.testResults
 }
 
 // Example test functions that use the existing CCM

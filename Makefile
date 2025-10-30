@@ -127,46 +127,50 @@ test-runner-all: build ## Run all test suites
 	./$(BUILD_DIR)/$(BINARY_NAME) --suite=all --verbose
 
 # Ginkgo-based test targets
+# Usage: make test-ginkgo KUBECONFIG=$(HOME)/.kube/config
+# Note: Use $(HOME) instead of ~ for proper path expansion
+KUBECONFIG?=$(HOME)/.kube/config
+
 .PHONY: test-ginkgo
-test-ginkgo: ## Run Ginkgo tests
+test-ginkgo: ## Run Ginkgo tests (use KUBECONFIG=/path/to/config)
 	@echo "Running Ginkgo tests..."
-	cd cmd/existing-ccm-test && ginkgo run --timeout=5m
+	cd cmd/existing-ccm-test && ginkgo run --timeout=5m -- --kubeconfig=$(KUBECONFIG)
 
 .PHONY: test-ginkgo-verbose
-test-ginkgo-verbose: ## Run Ginkgo tests with verbose output
+test-ginkgo-verbose: ## Run Ginkgo tests with verbose output (use KUBECONFIG=/path/to/config)
 	@echo "Running Ginkgo tests with verbose output..."
-	cd cmd/existing-ccm-test && ginkgo run --timeout=5m -v
+	cd cmd/existing-ccm-test && ginkgo run --timeout=5m -v -- --kubeconfig=$(KUBECONFIG)
 
 .PHONY: test-ginkgo-junit
-test-ginkgo-junit: ## Run Ginkgo tests with JUnit output
+test-ginkgo-junit: ## Run Ginkgo tests with JUnit output (use KUBECONFIG=/path/to/config)
 	@echo "Running Ginkgo tests with JUnit output..."
 	@mkdir -p test-results
-	cd cmd/existing-ccm-test && ginkgo run --timeout=5m --junit-report=../../test-results/junit.xml
+	cd cmd/existing-ccm-test && ginkgo run --timeout=5m --junit-report=../../test-results/junit.xml -- --kubeconfig=$(KUBECONFIG)
 
 .PHONY: test-ginkgo-coverage
-test-ginkgo-coverage: ## Run Ginkgo tests with coverage
+test-ginkgo-coverage: ## Run Ginkgo tests with coverage (use KUBECONFIG=/path/to/config)
 	@echo "Running Ginkgo tests with coverage..."
-	cd cmd/existing-ccm-test && ginkgo run --timeout=5m --cover --coverprofile=../../coverage.out
+	cd cmd/existing-ccm-test && ginkgo run --timeout=5m --cover --coverprofile=../../coverage.out -- --kubeconfig=$(KUBECONFIG)
 
 .PHONY: test-ginkgo-focus
-test-ginkgo-focus: ## Run Ginkgo tests with focus (specify FOCUS=pattern)
+test-ginkgo-focus: ## Run Ginkgo tests with focus (use FOCUS=pattern KUBECONFIG=/path/to/config)
 	@echo "Running Ginkgo tests with focus: $(FOCUS)"
-	cd cmd/existing-ccm-test && ginkgo run --timeout=5m --focus="$(FOCUS)"
+	cd cmd/existing-ccm-test && ginkgo run --timeout=5m --focus="$(FOCUS)" -- --kubeconfig=$(KUBECONFIG)
 
 .PHONY: test-ginkgo-skip
-test-ginkgo-skip: ## Run Ginkgo tests with skip (specify SKIP=pattern)
+test-ginkgo-skip: ## Run Ginkgo tests with skip (use SKIP=pattern KUBECONFIG=/path/to/config)
 	@echo "Running Ginkgo tests with skip: $(SKIP)"
-	cd cmd/existing-ccm-test && ginkgo run --timeout=5m --skip="$(SKIP)"
+	cd cmd/existing-ccm-test && ginkgo run --timeout=5m --skip="$(SKIP)" -- --kubeconfig=$(KUBECONFIG)
 
 .PHONY: test-ginkgo-labels
-test-ginkgo-labels: ## Run Ginkgo tests with labels (specify LABELS=pattern)
+test-ginkgo-labels: ## Run Ginkgo tests with labels (use LABELS=pattern KUBECONFIG=/path/to/config)
 	@echo "Running Ginkgo tests with labels: $(LABELS)"
-	cd cmd/existing-ccm-test && ginkgo run --timeout=5m --label-filter="$(LABELS)"
+	cd cmd/existing-ccm-test && ginkgo run --timeout=5m --label-filter="$(LABELS)" -- --kubeconfig=$(KUBECONFIG)
 
 .PHONY: test-ginkgo-watch
-test-ginkgo-watch: ## Run Ginkgo tests in watch mode
+test-ginkgo-watch: ## Run Ginkgo tests in watch mode (use KUBECONFIG=/path/to/config)
 	@echo "Running Ginkgo tests in watch mode..."
-	cd cmd/existing-ccm-test && ginkgo watch --timeout=5m
+	cd cmd/existing-ccm-test && ginkgo watch --timeout=5m -- --kubeconfig=$(KUBECONFIG)
 
 .PHONY: test-ginkgo-dry-run
 test-ginkgo-dry-run: ## Dry run Ginkgo tests (show what would be executed)
@@ -174,25 +178,25 @@ test-ginkgo-dry-run: ## Dry run Ginkgo tests (show what would be executed)
 	cd cmd/existing-ccm-test && ginkgo run --dry-run
 
 .PHONY: test-ginkgo-until-it-fails
-test-ginkgo-until-it-fails: ## Run Ginkgo tests until failure
+test-ginkgo-until-it-fails: ## Run Ginkgo tests until failure (use KUBECONFIG=/path/to/config)
 	@echo "Running Ginkgo tests until failure..."
-	cd cmd/existing-ccm-test && ginkgo run --until-it-fails --timeout=5m
+	cd cmd/existing-ccm-test && ginkgo run --until-it-fails --timeout=5m -- --kubeconfig=$(KUBECONFIG)
 
 .PHONY: test-ginkgo-repeat
-test-ginkgo-repeat: ## Run Ginkgo tests multiple times (specify REPEAT=count)
+test-ginkgo-repeat: ## Run Ginkgo tests multiple times (use REPEAT=count KUBECONFIG=/path/to/config)
 	@echo "Running Ginkgo tests $(REPEAT) times..."
-	cd cmd/existing-ccm-test && ginkgo run --repeat=$(REPEAT) --timeout=5m
+	cd cmd/existing-ccm-test && ginkgo run --repeat=$(REPEAT) --timeout=5m -- --kubeconfig=$(KUBECONFIG)
 
 .PHONY: test-ginkgo-flake-attempts
-test-ginkgo-flake-attempts: ## Run Ginkgo tests with flake attempts (specify ATTEMPTS=count)
+test-ginkgo-flake-attempts: ## Run Ginkgo tests with flake attempts (use ATTEMPTS=count KUBECONFIG=/path/to/config)
 	@echo "Running Ginkgo tests with $(ATTEMPTS) flake attempts..."
-	cd cmd/existing-ccm-test && ginkgo run --flake-attempts=$(ATTEMPTS) --timeout=5m
+	cd cmd/existing-ccm-test && ginkgo run --flake-attempts=$(ATTEMPTS) --timeout=5m -- --kubeconfig=$(KUBECONFIG)
 
 .PHONY: test-ginkgo-prow
-test-ginkgo-prow: ## Run Ginkgo tests in Prow-compatible mode
+test-ginkgo-prow: ## Run Ginkgo tests in Prow-compatible mode (use KUBECONFIG=/path/to/config)
 	@echo "Running Ginkgo tests in Prow-compatible mode..."
 	@mkdir -p test-results
-	cd cmd/existing-ccm-test && ginkgo run --timeout=5m --junit-report=../../test-results/junit.xml --cover --coverprofile=../../coverage.out --output-dir=../../test-results
+	cd cmd/existing-ccm-test && ginkgo run --timeout=5m --junit-report=../../test-results/junit.xml --cover --coverprofile=../../coverage.out --output-dir=../../test-results -- --kubeconfig=$(KUBECONFIG)
 
 .PHONY: lint
 lint: ## Run linter
